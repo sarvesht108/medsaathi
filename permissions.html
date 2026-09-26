@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>MedSaathi - Setup</title>
+<style>
+  :root {
+    --bg: #0f172a; --card: #1e293b; --primary: #22c55e;
+    --text: #f1f5f9; --text-dim: #94a3b8; --border: #334155; --error: #ef4444;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin:0; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px); }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: -apple-system, Roboto, "Segoe UI", sans-serif;
+    padding: 24px; min-height: 100vh;
+  }
+  .wrap { max-width: 420px; margin: 0 auto; }
+  h1 { font-size: 22px; text-align:center; margin-bottom: 6px; }
+  p.sub { color: var(--text-dim); text-align:center; margin-top:0; font-size:14px; }
+  .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 16px; padding: 20px; margin-bottom: 16px;
+  }
+  .code {
+    font-size: 32px; letter-spacing: 6px; font-weight: 800;
+    color: var(--primary); text-align: center; margin: 10px 0;
+  }
+  .step-title { font-weight: 700; margin-bottom: 6px; font-size: 15px; }
+  .step-desc { color: var(--text-dim); font-size: 13px; margin-bottom: 12px; }
+  input {
+    width: 100%; padding: 12px 14px; border-radius: 10px;
+    border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 15px;
+  }
+  button.primary, button.secondary {
+    width: 100%; margin-top: 12px; padding: 14px; border-radius: 10px;
+    font-size: 15px; font-weight: 700; border: none;
+  }
+  button.primary { background: var(--primary); color: #052e16; }
+  button.secondary { background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+  .perm-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 0; border-bottom: 1px solid var(--border);
+  }
+  .perm-row:last-child { border-bottom: none; }
+  .perm-status { font-size: 12px; color: var(--text-dim); }
+  .perm-status.granted { color: var(--primary); }
+  .msg { text-align:center; font-size:13px; min-height:18px; margin-top:10px; }
+  .msg.error { color: var(--error); }
+  .msg.info { color: var(--text-dim); }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Almost done!</h1>
+  <p class="sub">Sab zaroori cheezein ek baar mein set kar lete hain</p>
+
+  <div class="card" id="permCard">
+    <div class="step-title">🔔 Permissions</div>
+    <div class="step-desc">Reminders aur alerts ke liye yeh permission chahiye</div>
+    <div class="perm-row">
+      <span>Notifications</span>
+      <span class="perm-status" id="notifStatus">Not asked</span>
+    </div>
+    <button class="primary" id="askPermBtn">Permission Allow Karein</button>
+  </div>
+
+  <div class="card" id="linkCard">
+    <div class="step-title" id="linkTitle">🔗 Link Karein</div>
+    <div class="step-desc" id="linkDesc">Loading...</div>
+
+    <div id="patientLinkBlock" class="hidden">
+      <div class="step-desc">Apna yeh code caregiver ko bhejein, wo isse app mein daal ke aapse jud jayenge:</div>
+      <div class="code" id="myLinkCode">------</div>
+    </div>
+
+    <div id="caregiverLinkBlock" class="hidden">
+      <input type="text" id="enterCode" placeholder="6-digit code daalein" maxlength="6">
+      <button class="secondary" id="linkBtn">Link Karein</button>
+    </div>
+  </div>
+
+  <button class="primary" id="continueBtn">Dashboard pe jayein</button>
+  <div class="msg" id="msgBox"></div>
+</div>
+
+<script type="module">
+  import { auth, db, onAuthStateChanged } from "./firebase-config.js";
+  import {
+    doc, getDoc, updateDoc, query, collection, where, getDocs
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  const msgBox = document.getElementById("msgBox");
+  function showMsg(text, type = "info") {
+    msgBox.textContent = text;
+    msgBox.className = "msg " + type;
+  }
+
+  let currentUser = null;
+  let myRole = null;
+
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) {
+      window.location.href = "index.html";
+      return;
+    }
+    currentUser = user;
+    const snap = await getDoc(doc(db, "users", user.uid));
+    if (!snap.exists()) return;
+    const data = snap.data();
+    myRole = data.role;
+
+    if (myRole === "patient") {
+      document.getElementById("linkTitle").textContent = "🔗 Caregiver se judiye";
+      document.getElementById("linkDesc").textContent = "Yeh code caregiver ko dein taaki wo aapke dose status dekh sakein";
+      document.getElementById("patientLinkBlock").classList.remove("hidden");
+      document.getElementById("myLinkCode").textContent = data.linkCode || "------";
+    } else {
+      document.getElementById("linkTitle").textContent = "🔗 Patient se judiye";
+      document.getElementById("linkDesc").textContent = "Patient se unka 6-digit code lekar yahan daalein";
+      document.getElementById("caregiverLinkBlock").classList.remove("hidden");
+    }
+  });
+
+  const notifStatus = document.getElementById("notifStatus");
+  const askPermBtn = document.getElementById("askPermBtn");
+
+  function refreshNotifStatus() {
+    if (!("Notification" in window)) {
+      notifStatus.textContent = "Supported nahi";
+      return;
+    }
+    if (Notification.permission === "granted") {
+      notifStatus.textContent = "Allowed";
+      notifStatus.classList.add("granted");
+      askPermBtn.textContent = "Allowed ✓";
+    } else if (Notification.permission === "denied") {
+      notifStatus.textContent = "Blocked (Settings mein jaake allow karein)";
+    } else {
+      notifStatus.textContent = "Not asked";
+    }
+  }
+  refreshNotifStatus();
+
+  askPermBtn.addEventListener("click", async () => {
+    if (!("Notification" in window)) {
+      showMsg("Yeh browser notifications support nahi karta", "error");
+      return;
+    }
+    try {
+      await Notification.requestPermission();
+    } catch (e) { /* ignore */ }
+    refreshNotifStatus();
+  });
+
+  document.getElementById("linkBtn").addEventListener("click", async () => {
+    const code = document.getElementById("enterCode").value.trim();
+    if (code.length !== 6) {
+      showMsg("Sahi 6-digit code daalein", "error");
+      return;
+    }
+    showMsg("Dhundh rahe hain...", "info");
+    try {
+      const q = query(collection(db, "users"), where("linkCode", "==", code), where("role", "==", "patient"));
+      const results = await getDocs(q);
+      if (results.empty) {
+        showMsg("Yeh code kisi patient se match nahi hua", "error");
+        return;
+      }
+      const patientDoc = results.docs[0];
+      await updateDoc(doc(db, "users", currentUser.uid), { linkedTo: patientDoc.id });
+      await updateDoc(doc(db, "users", patientDoc.id), { linkedTo: currentUser.uid });
+      showMsg("Link ho gaya! Ab aap unke dose status dekh sakenge.", "info");
+    } catch (err) {
+      showMsg("Error: " + err.message, "error");
+    }
+  });
+
+  document.getElementById("continueBtn").addEventListener("click", () => {
+    window.location.href = "dashboard.html";
+  });
+</script>
+</body>
+</html>
