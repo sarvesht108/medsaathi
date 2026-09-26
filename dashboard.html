@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>MedSaathi</title>
+<style>
+  :root {
+    --bg: #0f172a; --card: #1e293b; --primary: #22c55e; --primary-dark:#16a34a;
+    --text: #f1f5f9; --text-dim: #94a3b8; --border: #334155; --error: #ef4444; --warn:#f59e0b;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin:0; height:100%; background:var(--bg); color:var(--text);
+    font-family: -apple-system, Roboto, "Segoe UI", sans-serif;
+    padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+  }
+  header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 16px; border-bottom:1px solid var(--border);
+    position: sticky; top: env(safe-area-inset-top,0px); background: var(--bg); z-index:5;
+  }
+  header h1 { font-size:18px; margin:0; color:var(--primary); }
+  main { padding: 16px; padding-bottom: 90px; max-width:480px; margin:0 auto; }
+  .card {
+    background:var(--card); border:1px solid var(--border);
+    border-radius:14px; padding:16px; margin-bottom:14px;
+  }
+  .med-item {
+    display:flex; justify-content:space-between; align-items:center;
+    padding:12px 0; border-bottom:1px solid var(--border);
+  }
+  .med-item:last-child{ border-bottom:none; }
+  .med-name { font-weight:700; font-size:15px; }
+  .med-sub { font-size:12px; color:var(--text-dim); }
+  .badge {
+    font-size:11px; padding:4px 10px; border-radius:20px; font-weight:700;
+  }
+  .badge.pending { background:#334155; color:var(--text-dim); }
+  .badge.taken { background: rgba(34,197,94,0.15); color: var(--primary); }
+  .badge.missed { background: rgba(239,68,68,0.15); color: var(--error); }
+  .fab {
+    position: fixed; right:20px; bottom: calc(84px + env(safe-area-inset-bottom,0px));
+    width:56px; height:56px; border-radius:50%; background:var(--primary);
+    color:#052e16; font-size:28px; border:none; box-shadow:0 4px 14px rgba(0,0,0,0.4);
+  }
+  nav.tabbar {
+    position: fixed; bottom:0; left:0; right:0; background:var(--card);
+    border-top:1px solid var(--border); display:flex;
+    padding-bottom: env(safe-area-inset-bottom,0px);
+  }
+  nav.tabbar button {
+    flex:1; background:none; border:none; color:var(--text-dim);
+    padding:10px 0; font-size:11px; display:flex; flex-direction:column; align-items:center; gap:4px;
+  }
+  nav.tabbar button.active { color: var(--primary); }
+  nav.tabbar .icon { font-size:20px; }
+  .tab-section { display:none; }
+  .tab-section.active { display:block; }
+  label { display:block; font-size:13px; color:var(--text-dim); margin:12px 0 6px; }
+  input, select {
+    width:100%; padding:12px 14px; border-radius:10px; border:1px solid var(--border);
+    background:var(--bg); color:var(--text); font-size:15px;
+  }
+  button.primary {
+    width:100%; margin-top:18px; padding:14px; border:none; border-radius:10px;
+    background:var(--primary); color:#052e16; font-weight:700; font-size:15px;
+  }
+  button.danger {
+    width:100%; margin-top:10px; padding:14px; border:1px solid var(--error);
+    background:none; color:var(--error); border-radius:10px; font-weight:700;
+  }
+  .modal-bg {
+    position:fixed; inset:0; background:rgba(0,0,0,0.6);
+    display:flex; align-items:flex-end; z-index:20;
+  }
+  .modal {
+    background:var(--card); width:100%; border-radius:20px 20px 0 0;
+    padding:20px; padding-bottom: calc(20px + env(safe-area-inset-bottom,0px));
+    max-height:85vh; overflow-y:auto;
+  }
+  .modal h2 { margin-top:0; font-size:18px; }
+  .close-x { float:right; font-size:20px; color:var(--text-dim); }
+  .hidden { display:none !important; }
+  .empty { text-align:center; color:var(--text-dim); padding:30px 10px; font-size:14px; }
+  .profile-row { display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border); font-size:14px; }
+  .profile-row span:first-child { color:var(--text-dim); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>💊 MedSaathi</h1>
+  <span id="roleTag" style="font-size:12px;color:var(--text-dim);"></span>
+</header>
+
+<main>
+  <section class="tab-section active" id="tab-medicines">
+    <div class="card">
+      <div id="medList"><div class="empty">Loading...</div></div>
+    </div>
+  </section>
+
+  <section class="tab-section" id="tab-history">
+    <div class="card">
+      <h2 style="margin-top:0;font-size:16px;">Dose History</h2>
+      <div id="historyList"><div class="empty">Loading...</div></div>
+    </div>
+  </section>
+
+  <section class="tab-section" id="tab-settings">
+    <div class="card">
+      <h2 style="margin-top:0;font-size:16px;">Settings</h2>
+      <label>Notifications</label>
+      <button class="primary" id="settingsNotifBtn">Notification Status Check Karein</button>
+      <label>Link Code Manage Karein</label>
+      <button class="primary" id="goToLinkBtn">Link Screen Kholein</button>
+    </div>
+  </section>
+
+  <section class="tab-section" id="tab-profile">
+    <div class="card">
+      <h2 style="margin-top:0;font-size:16px;">Profile</h2>
+      <div class="profile-row"><span>Naam</span><span id="pName">-</span></div>
+      <div class="profile-row"><span>Role</span><span id="pRole">-</span></div>
+      <div class="profile-row"><span>Phone</span><span id="pPhone">-</span></div>
+      <div class="profile-row"><span>Email</span><span id="pEmail">-</span></div>
+      <button class="danger" id="logoutBtn">Logout</button>
+    </div>
+  </section>
+</main>
+
+<button class="fab hidden" id="addMedFab">+</button>
+
+<nav class="tabbar">
+  <button class="active" data-tab="tab-medicines"><span class="icon">💊</span>Medicines</button>
+  <button data-tab="tab-history"><span class="icon">📋</span>History</button>
+  <button data-tab="tab-settings"><span class="icon">⚙️</span>Settings</button>
+  <button data-tab="tab-profile"><span class="icon">👤</span>Profile</button>
+</nav>
+
+<div class="modal-bg hidden" id="addModal">
+  <div class="modal">
+    <span class="close-x" id="closeModal">✕</span>
+    <h2>Nayi Dawai Add Karein</h2>
+    <form id="addMedForm">
+      <label>Dawai ka naam</label>
+      <input type="text" id="medName" required placeholder="Jaise: Paracetamol">
+      <label>Dosage</label>
+      <input type="text" id="medDosage" required placeholder="Jaise: 1 tablet">
+      <label>Time (din mein)</label>
+      <input type="time" id="medTime" required>
+      <button type="submit" class="primary">Save Karein</button>
+    </form>
+  </div>
+</div>
+
+<script type="module">
+  import { auth, db, onAuthStateChanged } from "./firebase-config.js";
+  import { signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import {
+    doc, getDoc, collection, addDoc, query, where, getDocs,
+    serverTimestamp, orderBy, limit
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  let currentUser = null;
+  let userData = null;
+  let patientId = null;
+
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) { window.location.href = "index.html"; return; }
+    currentUser = user;
+
+    const snap = await getDoc(doc(db, "users", user.uid));
+    if (!snap.exists()) return;
+    userData = snap.data();
+
+    document.getElementById("roleTag").textContent =
+      userData.role === "patient" ? "Patient" : "Caregiver";
+    document.getElementById("pName").textContent = userData.name || "-";
+    document.getElementById("pRole").textContent = userData.role || "-";
+    document.getElementById("pPhone").textContent = userData.phone || "-";
+    document.getElementById("pEmail").textContent = userData.email || "-";
+
+    if (userData.role === "patient") {
+      patientId = user.uid;
+      document.getElementById("addMedFab").classList.remove("hidden");
+    } else {
+      patientId = userData.linkedTo || null;
+    }
+
+    loadMedicines();
+    loadHistory();
+  });
+
+  document.querySelectorAll("nav.tabbar button").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll("nav.tabbar button").forEach(b => b.classList.remove("active"));
+      document.querySelectorAll(".tab-section").forEach(s => s.classList.remove("active"));
+      btn.classList.add("active");
+      document.getElementById(btn.dataset.tab).classList.add("active");
+    });
+  });
+
+  async function loadMedicines() {
+    const listEl = document.getElementById("medList");
+    if (!patientId) {
+      listEl.innerHTML = '<div class="empty">Abhi kisi patient se link nahi hain. Settings mein jaake link karein.</div>';
+      return;
+    }
+    const q = query(collection(db, "medicines"), where("patientId", "==", patientId));
+    const results = await getDocs(q);
+    if (results.empty) {
+      listEl.innerHTML = '<div class="empty">Koi dawai add nahi ki gayi hai abhi</div>';
+      return;
+    }
+    listEl.innerHTML = "";
+    results.forEach(docSnap => {
+      const m = docSnap.data();
+      const row = document.createElement("div");
+      row.className = "med-item";
+      row.innerHTML = `
+        <div>
+          <div class="med-name">${m.medicineName}</div>
+          <div class="med-sub">${m.dosage} • ${m.time}</div>
+        </div>
+        <span class="badge pending">Pending</span>
+      `;
+      listEl.appendChild(row);
+    });
+  }
+
+  async function loadHistory() {
+    const listEl = document.getElementById("historyList");
+    if (!patientId) {
+      listEl.innerHTML = '<div class="empty">Link hone ke baad history dikhegi</div>';
+      return;
+    }
+    try {
+      const q = query(
+        collection(db, "doseLogs"),
+        where("patientId", "==", patientId),
+        orderBy("scheduledTime", "desc"),
+        limit(20)
+      );
+      const results = await getDocs(q);
+      if (results.empty) {
+        listEl.innerHTML = '<div class="empty">Abhi koi history nahi hai</div>';
+        return;
+      }
+      listEl.innerHTML = "";
+      results.forEach(docSnap => {
+        const d = docSnap.data();
+        const row = document.createElement("div");
+        row.className = "med-item";
+        row.innerHTML = `
+          <div class="med-sub">${d.scheduledTime?.toDate ? d.scheduledTime.toDate().toLocaleString() : ""}</div>
+          <span class="badge ${d.status}">${d.status}</span>
+        `;
+        listEl.appendChild(row);
+      });
+    } catch (e) {
+      listEl.innerHTML = '<div class="empty">History load nahi ho payi</div>';
+    }
+  }
+
+  const addModal = document.getElementById("addModal");
+  document.getElementById("addMedFab").addEventListener("click", () => {
+    addModal.classList.remove("hidden");
+  });
+  document.getElementById("closeModal").addEventListener("click", () => {
+    addModal.classList.add("hidden");
+  });
+
+  document.getElementById("addMedForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const medicineName = document.getElementById("medName").value.trim();
+    const dosage = document.getElementById("medDosage").value.trim();
+    const time = document.getElementById("medTime").value;
+
+    await addDoc(collection(db, "medicines"), {
+      patientId,
+      medicineName,
+      dosage,
+      time,
+      createdAt: serverTimestamp()
+    });
+
+    addModal.classList.add("hidden");
+    document.getElementById("addMedForm").reset();
+    loadMedicines();
+  });
+
+  document.getElementById("settingsNotifBtn").addEventListener("click", () => {
+    alert("Notification status: " + (window.Notification ? Notification.permission : "not supported"));
+  });
+  document.getElementById("goToLinkBtn").addEventListener("click", () => {
+    window.location.href = "permissions.html";
+  });
+
+  document.getElementById("logoutBtn").addEventListener("click", async () => {
+    await signOut(auth);
+    window.location.href = "index.html";
+  });
+</script>
+</body>
+</html>
