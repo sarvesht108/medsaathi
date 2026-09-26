@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>MedSaathi - Login</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --card: #1e293b;
+    --primary: #22c55e;
+    --primary-dark: #16a34a;
+    --text: #f1f5f9;
+    --text-dim: #94a3b8;
+    --border: #334155;
+    --error: #ef4444;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    height: 100%;
+    margin: 0;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, Roboto, "Segoe UI", sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .wrap { width: 100%; max-width: 420px; }
+  .logo {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+  .logo h1 {
+    font-size: 28px;
+    margin: 8px 0 4px;
+    color: var(--primary);
+  }
+  .logo p {
+    color: var(--text-dim);
+    font-size: 14px;
+    margin: 0;
+  }
+  .card {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 24px;
+    border: 1px solid var(--border);
+  }
+  .tabs {
+    display: flex;
+    margin-bottom: 20px;
+    background: var(--bg);
+    border-radius: 10px;
+    padding: 4px;
+  }
+  .tab {
+    flex: 1;
+    text-align: center;
+    padding: 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    color: var(--text-dim);
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .tab.active {
+    background: var(--primary);
+    color: #052e16;
+  }
+  label {
+    display: block;
+    font-size: 13px;
+    color: var(--text-dim);
+    margin: 14px 0 6px;
+  }
+  input, select {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 15px;
+  }
+  input:focus, select:focus { outline: 2px solid var(--primary); }
+  button.primary {
+    width: 100%;
+    margin-top: 22px;
+    padding: 14px;
+    border: none;
+    border-radius: 10px;
+    background: var(--primary);
+    color: #052e16;
+    font-size: 16px;
+    font-weight: 700;
+  }
+  button.primary:active { background: var(--primary-dark); }
+  .msg {
+    margin-top: 14px;
+    font-size: 13px;
+    text-align: center;
+    min-height: 18px;
+  }
+  .msg.error { color: var(--error); }
+  .msg.info { color: var(--text-dim); }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="logo">
+      <h1>💊 MedSaathi</h1>
+      <p>Dawai ka saathi, hamesha yaad dilaye</p>
+    </div>
+
+    <div class="card">
+      <div class="tabs">
+        <div class="tab active" id="tabLogin">Login</div>
+        <div class="tab" id="tabSignup">Signup</div>
+      </div>
+
+      <form id="loginForm">
+        <label>Email</label>
+        <input type="email" id="loginEmail" required placeholder="aapka@email.com">
+        <label>Password</label>
+        <input type="password" id="loginPassword" required placeholder="********">
+        <button type="submit" class="primary">Login</button>
+      </form>
+
+      <form id="signupForm" class="hidden">
+        <label>Naam</label>
+        <input type="text" id="signupName" required placeholder="Apna naam likhein">
+        <label>Aap kaun hain?</label>
+        <select id="signupRole" required>
+          <option value="patient">Patient (dawai lene wala)</option>
+          <option value="caregiver">Caregiver (dekhbhal karne wala)</option>
+        </select>
+        <label>Phone Number</label>
+        <input type="tel" id="signupPhone" required placeholder="+91XXXXXXXXXX">
+        <label>Email</label>
+        <input type="email" id="signupEmail" required placeholder="aapka@email.com">
+        <label>Password</label>
+        <input type="password" id="signupPassword" required placeholder="Kam se kam 6 characters" minlength="6">
+        <button type="submit" class="primary">Account Banayein</button>
+      </form>
+
+      <div class="msg" id="msgBox"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { auth, db } from "./firebase-config.js";
+    import {
+      createUserWithEmailAndPassword,
+      signInWithEmailAndPassword
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import {
+      doc, setDoc, serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    const tabLogin = document.getElementById("tabLogin");
+    const tabSignup = document.getElementById("tabSignup");
+    const loginForm = document.getElementById("loginForm");
+    const signupForm = document.getElementById("signupForm");
+    const msgBox = document.getElementById("msgBox");
+
+    tabLogin.onclick = () => {
+      tabLogin.classList.add("active");
+      tabSignup.classList.remove("active");
+      loginForm.classList.remove("hidden");
+      signupForm.classList.add("hidden");
+      msgBox.textContent = "";
+    };
+    tabSignup.onclick = () => {
+      tabSignup.classList.add("active");
+      tabLogin.classList.remove("active");
+      signupForm.classList.remove("hidden");
+      loginForm.classList.add("hidden");
+      msgBox.textContent = "";
+    };
+
+    function showMsg(text, type = "info") {
+      msgBox.textContent = text;
+      msgBox.className = "msg " + type;
+    }
+
+    loginForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const email = document.getElementById("loginEmail").value.trim();
+      const password = document.getElementById("loginPassword").value;
+      showMsg("Login ho raha hai...", "info");
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+        window.location.href = "dashboard.html";
+      } catch (err) {
+        showMsg("Login fail: " + err.message, "error");
+      }
+    });
+
+    signupForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const name = document.getElementById("signupName").value.trim();
+      const role = document.getElementById("signupRole").value;
+      const phone = document.getElementById("signupPhone").value.trim();
+      const email = document.getElementById("signupEmail").value.trim();
+      const password = document.getElementById("signupPassword").value;
+
+      showMsg("Account ban raha hai...", "info");
+      try {
+        const cred = await createUserWithEmailAndPassword(auth, email, password);
+        const uid = cred.user.uid;
+
+        const linkCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+        await setDoc(doc(db, "users", uid), {
+          name,
+          role,
+          phone,
+          email,
+          linkCode,
+          linkedTo: null,
+          createdAt: serverTimestamp()
+        });
+
+        window.location.href = "permissions.html";
+      } catch (err) {
+        showMsg("Signup fail: " + err.message, "error");
+      }
+    });
+  </script>
+</body>
+</html>
