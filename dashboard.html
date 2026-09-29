@@ -31,7 +31,9 @@
   .med-swatch {
     width:48px; height:48px; border-radius:14px; display:flex;
     align-items:center; justify-content:center; font-size:26px; flex-shrink:0;
+    overflow:hidden; background-size:cover; background-position:center;
   }
+  .med-swatch img { width:100%; height:100%; object-fit:cover; }
   .med-name { font-weight:700; font-size:16px; }
   .med-sub { font-size:12px; color:var(--text-dim); }
   .period-row {
@@ -63,7 +65,7 @@
   nav.tabbar .icon { font-size:20px; }
   .tab-section { display:none; }
   .tab-section.active { display:block; }
-  label { display:block; font-size:13px; color:var(--text-dim); margin:14px 0 8px; }
+  label { display:block; font-size:13px; color:var(--text-dim); margin:14px 0 6px; }
   input, select {
     width:100%; padding:12px 14px; border-radius:10px; border:1px solid var(--border);
     background:var(--bg); color:var(--text); font-size:15px;
@@ -71,6 +73,10 @@
   button.primary {
     width:100%; margin-top:18px; padding:14px; border:none; border-radius:10px;
     background:var(--primary); color:#052e16; font-weight:700; font-size:15px;
+  }
+  button.secondary {
+    width:100%; margin-top:8px; padding:12px; border:1px solid var(--border); border-radius:10px;
+    background:var(--bg); color:var(--text); font-weight:700; font-size:14px;
   }
   button.danger {
     width:100%; margin-top:10px; padding:14px; border:1px solid var(--error);
@@ -105,6 +111,22 @@
   }
   .color-chip.selected { border-color: var(--text); }
   .med-delete { margin-left:auto; background:none; border:none; color:var(--text-dim); font-size:18px; }
+
+  .photo-box {
+    width:100%; height:120px; border-radius:12px; border:2px dashed var(--border);
+    display:flex; align-items:center; justify-content:center; color:var(--text-dim);
+    font-size:13px; overflow:hidden; position:relative; background:var(--bg);
+  }
+  .photo-box img { width:100%; height:100%; object-fit:cover; }
+  .time-add-row { display:flex; gap:8px; margin-top:8px; }
+  .time-add-row input { flex:1; }
+  .time-add-row button { width:auto; padding:0 16px; margin:0; border:none; border-radius:10px; background:var(--primary); color:#052e16; font-weight:700; }
+  .time-chip-list { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+  .time-chip {
+    background: rgba(34,197,94,0.15); color:var(--primary); padding:6px 10px;
+    border-radius:16px; font-size:13px; display:flex; align-items:center; gap:6px;
+  }
+  .time-chip span.rm { cursor:pointer; color:var(--error); font-weight:900; }
 </style>
 </head>
 <body>
@@ -121,7 +143,7 @@
 
   <section class="tab-section" id="tab-history">
     <div class="card">
-      <h2 style="margin-top:0;font-size:16px;">Dose History</h2>
+      <h2 style="margin-top:0;font-size:16px;">History</h2>
       <div id="historyList"><div class="empty">Loading...</div></div>
     </div>
   </section>
@@ -130,8 +152,8 @@
     <div class="card">
       <h2 style="margin-top:0;font-size:16px;">Settings</h2>
       <label>Notifications</label>
-      <button class="primary" id="settingsNotifBtn">Notification Status Check Karein</button>
-      <label>Link Code Manage Karein</label>
+      <button class="primary" id="settingsNotifBtn">Check Status</button>
+      <label>Link Code</label>
       <button class="primary" id="goToLinkBtn">Link Screen Kholein</button>
     </div>
   </section>
@@ -160,42 +182,47 @@
 <div class="modal-bg hidden" id="addModal">
   <div class="modal">
     <span class="close-x" id="closeModal">✕</span>
-    <h2>Nayi Dawai Add Karein</h2>
+    <h2>Nayi Dawai</h2>
     <form id="addMedForm">
 
-      <label>Dawai kis type ki hai?</label>
+      <label>Photo (optional)</label>
+      <div class="photo-box" id="photoBox">Photo khichein ya chunein</div>
+      <input type="file" id="medPhotoInput" accept="image/*" capture="environment" style="margin-top:8px;">
+
+      <label>Type</label>
       <div class="chip-grid" id="typeChips">
-        <div class="chip" data-value="💊">💊</div>
+        <div class="chip selected" data-value="💊">💊</div>
         <div class="chip" data-value="🧴">🧴</div>
         <div class="chip" data-value="💉">💉</div>
         <div class="chip" data-value="🩹">🩹</div>
       </div>
 
-      <label>Dawai ka rang</label>
+      <label>Rang</label>
       <div class="chip-grid" id="colorChips">
-        <div class="color-chip" data-value="#ef4444" style="background:#ef4444"></div>
+        <div class="color-chip selected" data-value="#ef4444" style="background:#ef4444"></div>
         <div class="color-chip" data-value="#f59e0b" style="background:#f59e0b"></div>
         <div class="color-chip" data-value="#22c55e" style="background:#22c55e"></div>
         <div class="color-chip" data-value="#3b82f6" style="background:#3b82f6"></div>
         <div class="color-chip" data-value="#f1f5f9" style="background:#f1f5f9"></div>
       </div>
 
-      <label>Kab leni hai? (ek ya zyada select karo)</label>
+      <label>Time (button dabao ya khud likho)</label>
       <div class="chip-grid" id="periodChips">
         <div class="chip small" data-value="morning"><span class="picon">🌅</span>Subah</div>
         <div class="chip small" data-value="afternoon"><span class="picon">☀️</span>Dopahar</div>
         <div class="chip small" data-value="evening"><span class="picon">🌆</span>Shaam</div>
         <div class="chip small" data-value="night"><span class="picon">🌙</span>Raat</div>
       </div>
-
-      <label>Doosri dawai se kitni der baad?</label>
-      <div class="chip-grid" id="gapChips">
-        <div class="chip small selected" data-value="0">🕐<br>Turant</div>
-        <div class="chip small" data-value="20">⏱️<br>20 min baad</div>
-        <div class="chip small" data-value="40">⏱️<br>40 min baad</div>
+      <div class="time-add-row">
+        <input type="time" id="customTimeInput">
+        <button type="button" id="addCustomTimeBtn">+ Add</button>
       </div>
+      <div class="time-chip-list" id="customTimeList"></div>
 
-      <label>Naam (optional, sirf caregiver ke liye)</label>
+      <label>Ek sath ya kitne minute baad? (0 likho agar ek sath)</label>
+      <input type="number" id="medGap" min="0" placeholder="0">
+
+      <label>Naam (optional)</label>
       <input type="text" id="medName" placeholder="Jaise: Paracetamol">
 
       <button type="submit" class="primary">Save Karein</button>
@@ -222,10 +249,17 @@
     const d = new Date();
     return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
   }
+  function periodInfo(p) {
+    if (PERIODS[p]) return PERIODS[p];
+    if (p.startsWith("custom-")) return { label: p.replace("custom-",""), icon: "⏰" };
+    return { label: p, icon: "⏰" };
+  }
 
   let currentUser = null;
   let userData = null;
   let patientId = null;
+  let customTimes = [];
+  let photoDataUrl = null;
 
   onAuthStateChanged(auth, async (user) => {
     if (!user) { window.location.href = "index.html"; return; }
@@ -242,11 +276,7 @@
     document.getElementById("pPhone").textContent = userData.phone || "-";
     document.getElementById("pEmail").textContent = userData.email || "-";
 
-    if (userData.role === "patient") {
-      patientId = user.uid;
-    } else {
-      patientId = userData.linkedTo || null;
-    }
+    patientId = userData.role === "patient" ? user.uid : (userData.linkedTo || null);
     if (patientId) document.getElementById("addMedFab").classList.remove("hidden");
 
     loadMedicines();
@@ -279,25 +309,72 @@
   }
   setupSingleSelect("typeChips");
   setupSingleSelect("colorChips");
-  setupSingleSelect("gapChips");
   setupMultiSelect("periodChips");
+
+  function renderCustomTimeList() {
+    const el = document.getElementById("customTimeList");
+    el.innerHTML = "";
+    customTimes.forEach((t, idx) => {
+      const chip = document.createElement("div");
+      chip.className = "time-chip";
+      chip.innerHTML = `⏰ ${t} <span class="rm" data-idx="${idx}">✕</span>`;
+      el.appendChild(chip);
+    });
+    el.querySelectorAll(".rm").forEach(rm => {
+      rm.addEventListener("click", () => {
+        customTimes.splice(parseInt(rm.dataset.idx, 10), 1);
+        renderCustomTimeList();
+      });
+    });
+  }
+  document.getElementById("addCustomTimeBtn").addEventListener("click", () => {
+    const val = document.getElementById("customTimeInput").value;
+    if (!val) return;
+    if (!customTimes.includes(val)) {
+      customTimes.push(val);
+      renderCustomTimeList();
+    }
+    document.getElementById("customTimeInput").value = "";
+  });
+
+  document.getElementById("medPhotoInput").addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        const maxSize = 200;
+        let w = img.width, h = img.height;
+        if (w > h) { h = Math.round(h * maxSize / w); w = maxSize; }
+        else { w = Math.round(w * maxSize / h); h = maxSize; }
+        const canvas = document.createElement("canvas");
+        canvas.width = w; canvas.height = h;
+        canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+        photoDataUrl = canvas.toDataURL("image/jpeg", 0.7);
+        document.getElementById("photoBox").innerHTML = `<img src="${photoDataUrl}">`;
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
 
   function notifyLocal(title, body) {
     if (window.Notification && Notification.permission === "granted") {
-      try { new Notification(title, { body, icon: undefined }); } catch (e) { /* ignore */ }
+      try { new Notification(title, { body }); } catch (e) { /* ignore */ }
     }
   }
 
   async function loadMedicines() {
     const listEl = document.getElementById("medList");
     if (!patientId) {
-      listEl.innerHTML = '<div class="card"><div class="empty">Abhi kisi patient se link nahi hain. Settings mein jaake link karein.</div></div>';
+      listEl.innerHTML = '<div class="card"><div class="empty">Settings mein jaake link karein</div></div>';
       return;
     }
     const q = query(collection(db, "medicines"), where("patientId", "==", patientId));
     const results = await getDocs(q);
     if (results.empty) {
-      listEl.innerHTML = '<div class="card"><div class="empty">Koi dawai add nahi ki gayi hai abhi</div></div>';
+      listEl.innerHTML = '<div class="card"><div class="empty">Koi dawai add nahi ki gayi hai</div></div>';
       return;
     }
     listEl.innerHTML = "";
@@ -311,7 +388,7 @@
 
       let periodsHtml = "";
       for (const p of (m.periods || [])) {
-        const info = PERIODS[p] || { label: p, icon: "⏰" };
+        const info = periodInfo(p);
         periodsHtml += `
           <div class="period-row">
             <div class="period-label"><span class="picon">${info.icon}</span> ${info.label}</div>
@@ -320,10 +397,14 @@
         `;
       }
 
+      const swatchInner = m.photoDataUrl
+        ? `<img src="${m.photoDataUrl}">`
+        : (m.icon || "💊");
+
       const gapText = m.gapMinutes ? ` • ${m.gapMinutes} min baad` : "";
       wrap.innerHTML = `
         <div class="med-head">
-          <div class="med-swatch" style="background:${m.color || '#334155'}22;border:2px solid ${m.color || '#334155'}">${m.icon || "💊"}</div>
+          <div class="med-swatch" style="border:2px solid ${m.color || '#334155'}">${swatchInner}</div>
           <div>
             <div class="med-name">${m.medicineName || "Dawai"}</div>
             <div class="med-sub">${(m.periods || []).length} baar din mein${gapText}</div>
@@ -335,7 +416,7 @@
       listEl.appendChild(wrap);
 
       wrap.querySelector(`button[data-delmed="${medId}"]`).addEventListener("click", async () => {
-        if (confirm("Yeh dawai delete karein?")) {
+        if (confirm("Delete karein?")) {
           await deleteDoc(doc(db, "medicines", medId));
           loadMedicines();
         }
@@ -362,7 +443,7 @@
           btn.textContent = "Li Gayi ✓";
           btn.classList.remove("pending");
           btn.classList.add("taken");
-          notifyLocal("✅ Dawai Li Gayi", `${m.medicineName || "Dawai"} - ${PERIODS[p]?.label || p}`);
+          notifyLocal("✅ Li Gayi", `${m.medicineName || "Dawai"} - ${periodInfo(p).label}`);
         });
       }
     }
@@ -389,7 +470,7 @@
       listEl.innerHTML = "";
       results.forEach(docSnap => {
         const d = docSnap.data();
-        const info = PERIODS[d.period] || { label: d.period, icon: "⏰" };
+        const info = periodInfo(d.period);
         const row = document.createElement("div");
         row.className = "period-row";
         row.innerHTML = `
@@ -415,23 +496,24 @@
     e.preventDefault();
     const typeSel = document.querySelector("#typeChips .selected");
     const colorSel = document.querySelector("#colorChips .selected");
-    const periodSels = document.querySelectorAll("#periodChips .selected");
-    const gapSel = document.querySelector("#gapChips .selected");
+    const periodSels = Array.from(document.querySelectorAll("#periodChips .selected")).map(el => el.dataset.value);
+    const customPeriods = customTimes.map(t => `custom-${t}`);
+    const periods = [...periodSels, ...customPeriods];
+    const gapVal = parseInt(document.getElementById("medGap").value || "0", 10);
     const medicineName = document.getElementById("medName").value.trim();
 
-    if (!typeSel || !colorSel || periodSels.length === 0) {
-      alert("Type, rang, aur kam se kam ek time period select karein");
+    if (!typeSel || !colorSel || periods.length === 0) {
+      alert("Type, rang, aur kam se kam ek time select karein");
       return;
     }
-
-    const periods = Array.from(periodSels).map(el => el.dataset.value);
 
     await addDoc(collection(db, "medicines"), {
       patientId,
       icon: typeSel.dataset.value,
       color: colorSel.dataset.value,
+      photoDataUrl: photoDataUrl || null,
       periods,
-      gapMinutes: gapSel ? parseInt(gapSel.dataset.value, 10) : 0,
+      gapMinutes: gapVal,
       medicineName: medicineName || "",
       createdAt: serverTimestamp()
     });
@@ -439,12 +521,17 @@
     addModal.classList.add("hidden");
     document.getElementById("addMedForm").reset();
     document.querySelectorAll(".chip, .color-chip").forEach(c => c.classList.remove("selected"));
-    document.querySelector('#gapChips .chip[data-value="0"]').classList.add("selected");
+    document.querySelector('#typeChips .chip').classList.add("selected");
+    document.querySelector('#colorChips .color-chip').classList.add("selected");
+    customTimes = [];
+    renderCustomTimeList();
+    photoDataUrl = null;
+    document.getElementById("photoBox").innerHTML = "Photo khichein ya chunein";
     loadMedicines();
   });
 
   document.getElementById("settingsNotifBtn").addEventListener("click", () => {
-    alert("Notification status: " + (window.Notification ? Notification.permission : "not supported"));
+    alert("Status: " + (window.Notification ? Notification.permission : "not supported"));
   });
   document.getElementById("goToLinkBtn").addEventListener("click", () => {
     window.location.href = "permissions.html";
