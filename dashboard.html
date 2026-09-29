@@ -191,10 +191,10 @@
 
       <label>Type</label>
       <div class="chip-grid" id="typeChips">
-        <div class="chip selected" data-value="💊">💊</div>
-        <div class="chip" data-value="🧴">🧴</div>
-        <div class="chip" data-value="💉">💉</div>
-        <div class="chip" data-value="🩹">🩹</div>
+        <div class="chip small selected" data-value="💊">💊<br>Tablet</div>
+        <div class="chip small" data-value="🥄">🥄<br>Syrup</div>
+        <div class="chip small" data-value="💉">💉<br>Injection</div>
+        <div class="chip small" data-value="🩹">🩹<br>Patch</div>
       </div>
 
       <label>Rang</label>
@@ -392,7 +392,7 @@
         periodsHtml += `
           <div class="period-row">
             <div class="period-label"><span class="picon">${info.icon}</span> ${info.label}</div>
-            <button class="take-btn pending" data-med="${medId}" data-period="${p}">Le Li</button>
+            <button class="take-btn pending" data-med="${medId}" data-period="${p}">Pending</button>
           </div>
         `;
       }
@@ -427,7 +427,7 @@
         const logSnap = await getDoc(doc(db, "doseLogs", logId));
         const btn = wrap.querySelector(`button[data-med="${medId}"][data-period="${p}"]`);
         if (logSnap.exists() && logSnap.data().status === "taken") {
-          btn.textContent = "Li Gayi ✓";
+          btn.textContent = "Done ✓";
           btn.classList.remove("pending");
           btn.classList.add("taken");
         }
@@ -440,10 +440,10 @@
             status: "taken",
             takenAt: serverTimestamp()
           });
-          btn.textContent = "Li Gayi ✓";
+          btn.textContent = "Done ✓";
           btn.classList.remove("pending");
           btn.classList.add("taken");
-          notifyLocal("✅ Li Gayi", `${m.medicineName || "Dawai"} - ${periodInfo(p).label}`);
+          notifyLocal("✅ Done", `${m.medicineName || "Dawai"} - ${periodInfo(p).label}`);
         });
       }
     }
@@ -475,7 +475,7 @@
         row.className = "period-row";
         row.innerHTML = `
           <div class="period-label"><span class="picon">${info.icon}</span> ${info.label} • ${d.dateStr}</div>
-          <span class="take-btn taken">Li Gayi</span>
+          <span class="take-btn taken">Done</span>
         `;
         listEl.appendChild(row);
       });
@@ -484,8 +484,21 @@
     }
   }
 
+  function resetFormState() {
+    customTimes = [];
+    photoDataUrl = null;
+    document.getElementById("addMedForm").reset();
+    document.getElementById("photoBox").innerHTML = "Photo khichein ya chunein";
+    document.querySelectorAll("#typeChips .chip, #colorChips .color-chip, #periodChips .chip")
+      .forEach(c => c.classList.remove("selected"));
+    document.querySelector('#typeChips .chip').classList.add("selected");
+    document.querySelector('#colorChips .color-chip').classList.add("selected");
+    renderCustomTimeList();
+  }
+
   const addModal = document.getElementById("addModal");
   document.getElementById("addMedFab").addEventListener("click", () => {
+    resetFormState();
     addModal.classList.remove("hidden");
   });
   document.getElementById("closeModal").addEventListener("click", () => {
@@ -519,14 +532,7 @@
     });
 
     addModal.classList.add("hidden");
-    document.getElementById("addMedForm").reset();
-    document.querySelectorAll(".chip, .color-chip").forEach(c => c.classList.remove("selected"));
-    document.querySelector('#typeChips .chip').classList.add("selected");
-    document.querySelector('#colorChips .color-chip').classList.add("selected");
-    customTimes = [];
-    renderCustomTimeList();
-    photoDataUrl = null;
-    document.getElementById("photoBox").innerHTML = "Photo khichein ya chunein";
+    resetFormState();
     loadMedicines();
   });
 
