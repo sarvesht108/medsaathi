@@ -104,6 +104,7 @@
     width:44px; height:44px; border-radius:50%; border:3px solid var(--border); flex: 0 0 auto;
   }
   .color-chip.selected { border-color: var(--text); }
+  .med-delete { margin-left:auto; background:none; border:none; color:var(--text-dim); font-size:18px; }
 </style>
 </head>
 <body>
@@ -187,6 +188,13 @@
         <div class="chip small" data-value="night"><span class="picon">🌙</span>Raat</div>
       </div>
 
+      <label>Doosri dawai se kitni der baad?</label>
+      <div class="chip-grid" id="gapChips">
+        <div class="chip small selected" data-value="0">🕐<br>Turant</div>
+        <div class="chip small" data-value="20">⏱️<br>20 min baad</div>
+        <div class="chip small" data-value="40">⏱️<br>40 min baad</div>
+      </div>
+
       <label>Naam (optional, sirf caregiver ke liye)</label>
       <input type="text" id="medName" placeholder="Jaise: Paracetamol">
 
@@ -199,7 +207,7 @@
   import { auth, db, onAuthStateChanged } from "./firebase-config.js";
   import { signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
   import {
-    doc, getDoc, setDoc, collection, addDoc, query, where, getDocs,
+    doc, getDoc, setDoc, deleteDoc, collection, addDoc, query, where, getDocs,
     serverTimestamp, orderBy, limit
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
@@ -271,7 +279,14 @@
   }
   setupSingleSelect("typeChips");
   setupSingleSelect("colorChips");
+  setupSingleSelect("gapChips");
   setupMultiSelect("periodChips");
+
+  function notifyLocal(title, body) {
+    if (window.Notification && Notification.permission === "granted") {
+      try { new Notification(title, { body, icon: undefined }); } catch (e) { /* ignore */ }
+    }
+  }
 
   async function loadMedicines() {
     const listEl = document.getElementById("medList");
@@ -305,17 +320,26 @@
         `;
       }
 
+      const gapText = m.gapMinutes ? ` • ${m.gapMinutes} min baad` : "";
       wrap.innerHTML = `
         <div class="med-head">
           <div class="med-swatch" style="background:${m.color || '#334155'}22;border:2px solid ${m.color || '#334155'}">${m.icon || "💊"}</div>
           <div>
             <div class="med-name">${m.medicineName || "Dawai"}</div>
-            <div class="med-sub">${(m.periods || []).length} baar din mein</div>
+            <div class="med-sub">${(m.periods || []).length} baar din mein${gapText}</div>
           </div>
+          <button class="med-delete" data-delmed="${medId}">🗑️</button>
         </div>
         ${periodsHtml}
       `;
       listEl.appendChild(wrap);
+
+      wrap.querySelector(`button[data-delmed="${medId}"]`).addEventListener("click", async () => {
+        if (confirm("Yeh dawai delete karein?")) {
+          await deleteDoc(doc(db, "medicines", medId));
+          loadMedicines();
+        }
+      });
 
       for (const p of (m.periods || [])) {
         const logId = `${medId}_${p}_${today}`;
@@ -338,6 +362,7 @@
           btn.textContent = "Li Gayi ✓";
           btn.classList.remove("pending");
           btn.classList.add("taken");
+          notifyLocal("✅ Dawai Li Gayi", `${m.medicineName || "Dawai"} - ${PERIODS[p]?.label || p}`);
         });
       }
     }
@@ -391,6 +416,7 @@
     const typeSel = document.querySelector("#typeChips .selected");
     const colorSel = document.querySelector("#colorChips .selected");
     const periodSels = document.querySelectorAll("#periodChips .selected");
+    const gapSel = document.querySelector("#gapChips .selected");
     const medicineName = document.getElementById("medName").value.trim();
 
     if (!typeSel || !colorSel || periodSels.length === 0) {
@@ -405,6 +431,7 @@
       icon: typeSel.dataset.value,
       color: colorSel.dataset.value,
       periods,
+      gapMinutes: gapSel ? parseInt(gapSel.dataset.value, 10) : 0,
       medicineName: medicineName || "",
       createdAt: serverTimestamp()
     });
@@ -412,6 +439,7 @@
     addModal.classList.add("hidden");
     document.getElementById("addMedForm").reset();
     document.querySelectorAll(".chip, .color-chip").forEach(c => c.classList.remove("selected"));
+    document.querySelector('#gapChips .chip[data-value="0"]').classList.add("selected");
     loadMedicines();
   });
 
