@@ -118,7 +118,7 @@
     font-size:13px; overflow:hidden; position:relative; background:var(--bg);
   }
   .photo-box img { width:100%; height:100%; object-fit:cover; }
-  .time-add-row { display:flex; gap:8px; margin-top:8px; }
+  .time-add-row { display:flex; gap:8px; margin-top:8px; align-items:center; }
   .time-add-row input { flex:1; }
   .time-add-row button { width:auto; padding:0 16px; margin:0; border:none; border-radius:10px; background:var(--primary); color:#052e16; font-weight:700; }
   .time-chip-list { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
@@ -206,13 +206,16 @@
         <div class="color-chip" data-value="#f1f5f9" style="background:#f1f5f9"></div>
       </div>
 
-      <label>Time (button dabao ya khud likho)</label>
+      <label>Kab leni hai? (select karo)</label>
       <div class="chip-grid" id="periodChips">
         <div class="chip small" data-value="morning"><span class="picon">🌅</span>Subah</div>
         <div class="chip small" data-value="afternoon"><span class="picon">☀️</span>Dopahar</div>
         <div class="chip small" data-value="evening"><span class="picon">🌆</span>Shaam</div>
         <div class="chip small" data-value="night"><span class="picon">🌙</span>Raat</div>
       </div>
+      <div id="periodTimeInputs"></div>
+
+      <label>Extra time (optional, khud se add karo)</label>
       <div class="time-add-row">
         <input type="time" id="customTimeInput">
         <button type="button" id="addCustomTimeBtn">+ Add</button>
@@ -239,10 +242,10 @@
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
   const PERIODS = {
-    morning:   { label: "Subah",   icon: "🌅" },
-    afternoon: { label: "Dopahar", icon: "☀️" },
-    evening:   { label: "Shaam",   icon: "🌆" },
-    night:     { label: "Raat",    icon: "🌙" }
+    morning:   { label: "Subah",   icon: "🌅", defaultTime: "08:00" },
+    afternoon: { label: "Dopahar", icon: "☀️", defaultTime: "13:00" },
+    evening:   { label: "Shaam",   icon: "🌆", defaultTime: "18:00" },
+    night:     { label: "Raat",    icon: "🌙", defaultTime: "21:00" }
   };
 
   function todayStr() {
@@ -301,10 +304,31 @@
       });
     });
   }
+
+  function renderPeriodTimeInputs() {
+    const box = document.getElementById("periodTimeInputs");
+    const selected = Array.from(document.querySelectorAll("#periodChips .selected")).map(el => el.dataset.value);
+    const existing = {};
+    box.querySelectorAll("input[data-period]").forEach(inp => { existing[inp.dataset.period] = inp.value; });
+    box.innerHTML = "";
+    selected.forEach(key => {
+      const info = PERIODS[key];
+      const row = document.createElement("div");
+      row.className = "time-add-row";
+      row.innerHTML = `
+        <span style="width:90px;font-size:13px;display:flex;align-items:center;">${info.icon} ${info.label}</span>
+        <input type="time" data-period="${key}" value="${existing[key] || info.defaultTime}">
+      `;
+      box.appendChild(row);
+    });
+  }
   function setupMultiSelect(containerId) {
     const container = document.getElementById(containerId);
     container.querySelectorAll(".chip").forEach(chip => {
-      chip.addEventListener("click", () => chip.classList.toggle("selected"));
+      chip.addEventListener("click", () => {
+        chip.classList.toggle("selected");
+        renderPeriodTimeInputs();
+      });
     });
   }
   setupSingleSelect("typeChips");
@@ -389,9 +413,10 @@
       let periodsHtml = "";
       for (const p of (m.periods || [])) {
         const info = periodInfo(p);
+        const setTime = (m.periodTimes && m.periodTimes[p]) ? ` (${m.periodTimes[p]})` : "";
         periodsHtml += `
           <div class="period-row">
-            <div class="period-label"><span class="picon">${info.icon}</span> ${info.label}</div>
+            <div class="period-label"><span class="picon">${info.icon}</span> ${info.label}${setTime}</div>
             <button class="take-btn pending" data-med="${medId}" data-period="${p}">Pending</button>
           </div>
         `;
@@ -493,6 +518,7 @@
       .forEach(c => c.classList.remove("selected"));
     document.querySelector('#typeChips .chip').classList.add("selected");
     document.querySelector('#colorChips .color-chip').classList.add("selected");
+    document.getElementById("periodTimeInputs").innerHTML = "";
     renderCustomTimeList();
   }
 
@@ -510,6 +536,10 @@
     const typeSel = document.querySelector("#typeChips .selected");
     const colorSel = document.querySelector("#colorChips .selected");
     const periodSels = Array.from(document.querySelectorAll("#periodChips .selected")).map(el => el.dataset.value);
+    const periodTimes = {};
+    document.querySelectorAll("#periodTimeInputs input[data-period]").forEach(inp => {
+      periodTimes[inp.dataset.period] = inp.value;
+    });
     const customPeriods = customTimes.map(t => `custom-${t}`);
     const periods = [...periodSels, ...customPeriods];
     const gapVal = parseInt(document.getElementById("medGap").value || "0", 10);
@@ -526,6 +556,7 @@
       color: colorSel.dataset.value,
       photoDataUrl: photoDataUrl || null,
       periods,
+      periodTimes,
       gapMinutes: gapVal,
       medicineName: medicineName || "",
       createdAt: serverTimestamp()
