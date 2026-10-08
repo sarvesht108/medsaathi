@@ -118,8 +118,15 @@
     font-size:13px; overflow:hidden; position:relative; background:var(--bg);
   }
   .photo-box img { width:100%; height:100%; object-fit:cover; }
-  .time-add-row { display:flex; gap:8px; margin-top:8px; align-items:center; }
+  .time-add-row { display:flex; gap:8px; margin-top:8px; }
   .time-add-row input { flex:1; }
+  .time-add-row button { width:auto; padding:0 16px; margin:0; border:none; border-radius:10px; background:var(--primary); color:#052e16; font-weight:700; }
+  .time-chip-list { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+  .time-chip {
+    background: rgba(34,197,94,0.15); color:var(--primary); padding:6px 10px;
+    border-radius:16px; font-size:13px; display:flex; align-items:center; gap:6px;
+  }
+  .time-chip span.rm { cursor:pointer; color:var(--error); font-weight:900; }
 </style>
 </head>
 <body>
@@ -147,14 +154,14 @@
       <label>Notifications</label>
       <button class="primary" id="settingsNotifBtn">Check Status</button>
       <label>Link Code</label>
-      <button class="primary" id="goToLinkBtn">Open Link Screen</button>
+      <button class="primary" id="goToLinkBtn">Link Screen Kholein</button>
     </div>
   </section>
 
   <section class="tab-section" id="tab-profile">
     <div class="card">
       <h2 style="margin-top:0;font-size:16px;">Profile</h2>
-      <div class="profile-row"><span>Name</span><span id="pName">-</span></div>
+      <div class="profile-row"><span>Naam</span><span id="pName">-</span></div>
       <div class="profile-row"><span>Role</span><span id="pRole">-</span></div>
       <div class="profile-row"><span>Phone</span><span id="pPhone">-</span></div>
       <div class="profile-row"><span>Email</span><span id="pEmail">-</span></div>
@@ -208,9 +215,6 @@
       </div>
       <div id="periodTimeInputs"></div>
 
-      <label>Together or how many minutes after? (0 = together)</label>
-      <input type="number" id="medGap" min="0" placeholder="0">
-
       <label>Name (optional)</label>
       <input type="text" id="medName" placeholder="e.g. Paracetamol">
 
@@ -239,7 +243,9 @@
     return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
   }
   function periodInfo(p) {
-    return PERIODS[p] || { label: p, icon: "⏰" };
+    if (PERIODS[p]) return PERIODS[p];
+    if (p.startsWith("custom-")) return { label: p.replace("custom-",""), icon: "⏰" };
+    return { label: p, icon: "⏰" };
   }
 
   let currentUser = null;
@@ -287,10 +293,10 @@
       });
     });
   }
-
   function renderPeriodTimeInputs() {
     const box = document.getElementById("periodTimeInputs");
     const selected = Array.from(document.querySelectorAll("#periodChips .selected")).map(el => el.dataset.value);
+    // keep existing typed values if the input already exists
     const existing = {};
     box.querySelectorAll("input[data-period]").forEach(inp => { existing[inp.dataset.period] = inp.value; });
     box.innerHTML = "";
@@ -318,6 +324,7 @@
   setupSingleSelect("colorChips");
   setupMultiSelect("periodChips");
 
+  // ---- Photo capture (resized to small base64 thumbnail) ----
   document.getElementById("medPhotoInput").addEventListener("change", (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -383,13 +390,12 @@
         ? `<img src="${m.photoDataUrl}">`
         : (m.icon || "💊");
 
-      const gapText = m.gapMinutes ? ` • ${m.gapMinutes} min later` : "";
       wrap.innerHTML = `
         <div class="med-head">
           <div class="med-swatch" style="border:2px solid ${m.color || '#334155'}">${swatchInner}</div>
           <div>
             <div class="med-name">${m.medicineName || "Medicine"}</div>
-            <div class="med-sub">${(m.periods || []).length}x per day${gapText}</div>
+            <div class="med-sub">${(m.periods || []).length}x per day</div>
           </div>
           <button class="med-delete" data-delmed="${medId}">🗑️</button>
         </div>
@@ -496,7 +502,6 @@
       periodTimes[inp.dataset.period] = inp.value;
     });
     const periods = periodSels;
-    const gapVal = parseInt(document.getElementById("medGap").value || "0", 10);
     const medicineName = document.getElementById("medName").value.trim();
 
     if (!typeSel || !colorSel || periods.length === 0) {
@@ -511,7 +516,6 @@
       photoDataUrl: photoDataUrl || null,
       periods,
       periodTimes,
-      gapMinutes: gapVal,
       medicineName: medicineName || "",
       createdAt: serverTimestamp()
     });
@@ -535,3 +539,4 @@
 </script>
 </body>
 </html>
+  
