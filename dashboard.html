@@ -120,13 +120,6 @@
   .photo-box img { width:100%; height:100%; object-fit:cover; }
   .time-add-row { display:flex; gap:8px; margin-top:8px; align-items:center; }
   .time-add-row input { flex:1; }
-  .time-add-row button { width:auto; padding:0 16px; margin:0; border:none; border-radius:10px; background:var(--primary); color:#052e16; font-weight:700; }
-  .time-chip-list { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
-  .time-chip {
-    background: rgba(34,197,94,0.15); color:var(--primary); padding:6px 10px;
-    border-radius:16px; font-size:13px; display:flex; align-items:center; gap:6px;
-  }
-  .time-chip span.rm { cursor:pointer; color:var(--error); font-weight:900; }
 </style>
 </head>
 <body>
@@ -154,14 +147,14 @@
       <label>Notifications</label>
       <button class="primary" id="settingsNotifBtn">Check Status</button>
       <label>Link Code</label>
-      <button class="primary" id="goToLinkBtn">Link Screen Kholein</button>
+      <button class="primary" id="goToLinkBtn">Open Link Screen</button>
     </div>
   </section>
 
   <section class="tab-section" id="tab-profile">
     <div class="card">
       <h2 style="margin-top:0;font-size:16px;">Profile</h2>
-      <div class="profile-row"><span>Naam</span><span id="pName">-</span></div>
+      <div class="profile-row"><span>Name</span><span id="pName">-</span></div>
       <div class="profile-row"><span>Role</span><span id="pRole">-</span></div>
       <div class="profile-row"><span>Phone</span><span id="pPhone">-</span></div>
       <div class="profile-row"><span>Email</span><span id="pEmail">-</span></div>
@@ -182,11 +175,11 @@
 <div class="modal-bg hidden" id="addModal">
   <div class="modal">
     <span class="close-x" id="closeModal">✕</span>
-    <h2>Nayi Dawai</h2>
+    <h2>New Medicine</h2>
     <form id="addMedForm">
 
       <label>Photo (optional)</label>
-      <div class="photo-box" id="photoBox">Photo khichein ya chunein</div>
+      <div class="photo-box" id="photoBox">Take or choose a photo</div>
       <input type="file" id="medPhotoInput" accept="image/*" capture="environment" style="margin-top:8px;">
 
       <label>Type</label>
@@ -197,7 +190,7 @@
         <div class="chip small" data-value="🩹">🩹<br>Patch</div>
       </div>
 
-      <label>Rang</label>
+      <label>Color</label>
       <div class="chip-grid" id="colorChips">
         <div class="color-chip selected" data-value="#ef4444" style="background:#ef4444"></div>
         <div class="color-chip" data-value="#f59e0b" style="background:#f59e0b"></div>
@@ -206,7 +199,7 @@
         <div class="color-chip" data-value="#f1f5f9" style="background:#f1f5f9"></div>
       </div>
 
-      <label>Kab leni hai? (select karo)</label>
+      <label>When to take? (select)</label>
       <div class="chip-grid" id="periodChips">
         <div class="chip small" data-value="morning"><span class="picon">🌅</span>Subah</div>
         <div class="chip small" data-value="afternoon"><span class="picon">☀️</span>Dopahar</div>
@@ -215,20 +208,13 @@
       </div>
       <div id="periodTimeInputs"></div>
 
-      <label>Extra time (optional, khud se add karo)</label>
-      <div class="time-add-row">
-        <input type="time" id="customTimeInput">
-        <button type="button" id="addCustomTimeBtn">+ Add</button>
-      </div>
-      <div class="time-chip-list" id="customTimeList"></div>
-
-      <label>Ek sath ya kitne minute baad? (0 likho agar ek sath)</label>
+      <label>Together or how many minutes after? (0 = together)</label>
       <input type="number" id="medGap" min="0" placeholder="0">
 
-      <label>Naam (optional)</label>
-      <input type="text" id="medName" placeholder="Jaise: Paracetamol">
+      <label>Name (optional)</label>
+      <input type="text" id="medName" placeholder="e.g. Paracetamol">
 
-      <button type="submit" class="primary">Save Karein</button>
+      <button type="submit" class="primary">Save</button>
     </form>
   </div>
 </div>
@@ -253,15 +239,12 @@
     return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
   }
   function periodInfo(p) {
-    if (PERIODS[p]) return PERIODS[p];
-    if (p.startsWith("custom-")) return { label: p.replace("custom-",""), icon: "⏰" };
-    return { label: p, icon: "⏰" };
+    return PERIODS[p] || { label: p, icon: "⏰" };
   }
 
   let currentUser = null;
   let userData = null;
   let patientId = null;
-  let customTimes = [];
   let photoDataUrl = null;
 
   onAuthStateChanged(auth, async (user) => {
@@ -335,32 +318,6 @@
   setupSingleSelect("colorChips");
   setupMultiSelect("periodChips");
 
-  function renderCustomTimeList() {
-    const el = document.getElementById("customTimeList");
-    el.innerHTML = "";
-    customTimes.forEach((t, idx) => {
-      const chip = document.createElement("div");
-      chip.className = "time-chip";
-      chip.innerHTML = `⏰ ${t} <span class="rm" data-idx="${idx}">✕</span>`;
-      el.appendChild(chip);
-    });
-    el.querySelectorAll(".rm").forEach(rm => {
-      rm.addEventListener("click", () => {
-        customTimes.splice(parseInt(rm.dataset.idx, 10), 1);
-        renderCustomTimeList();
-      });
-    });
-  }
-  document.getElementById("addCustomTimeBtn").addEventListener("click", () => {
-    const val = document.getElementById("customTimeInput").value;
-    if (!val) return;
-    if (!customTimes.includes(val)) {
-      customTimes.push(val);
-      renderCustomTimeList();
-    }
-    document.getElementById("customTimeInput").value = "";
-  });
-
   document.getElementById("medPhotoInput").addEventListener("change", (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -392,13 +349,13 @@
   async function loadMedicines() {
     const listEl = document.getElementById("medList");
     if (!patientId) {
-      listEl.innerHTML = '<div class="card"><div class="empty">Settings mein jaake link karein</div></div>';
+      listEl.innerHTML = '<div class="card"><div class="empty">Go to Settings to link</div></div>';
       return;
     }
     const q = query(collection(db, "medicines"), where("patientId", "==", patientId));
     const results = await getDocs(q);
     if (results.empty) {
-      listEl.innerHTML = '<div class="card"><div class="empty">Koi dawai add nahi ki gayi hai</div></div>';
+      listEl.innerHTML = '<div class="card"><div class="empty">No medicines added yet</div></div>';
       return;
     }
     listEl.innerHTML = "";
@@ -426,13 +383,13 @@
         ? `<img src="${m.photoDataUrl}">`
         : (m.icon || "💊");
 
-      const gapText = m.gapMinutes ? ` • ${m.gapMinutes} min baad` : "";
+      const gapText = m.gapMinutes ? ` • ${m.gapMinutes} min later` : "";
       wrap.innerHTML = `
         <div class="med-head">
           <div class="med-swatch" style="border:2px solid ${m.color || '#334155'}">${swatchInner}</div>
           <div>
-            <div class="med-name">${m.medicineName || "Dawai"}</div>
-            <div class="med-sub">${(m.periods || []).length} baar din mein${gapText}</div>
+            <div class="med-name">${m.medicineName || "Medicine"}</div>
+            <div class="med-sub">${(m.periods || []).length}x per day${gapText}</div>
           </div>
           <button class="med-delete" data-delmed="${medId}">🗑️</button>
         </div>
@@ -441,7 +398,7 @@
       listEl.appendChild(wrap);
 
       wrap.querySelector(`button[data-delmed="${medId}"]`).addEventListener("click", async () => {
-        if (confirm("Delete karein?")) {
+        if (confirm("Delete this medicine?")) {
           await deleteDoc(doc(db, "medicines", medId));
           loadMedicines();
         }
@@ -468,7 +425,7 @@
           btn.textContent = "Done ✓";
           btn.classList.remove("pending");
           btn.classList.add("taken");
-          notifyLocal("✅ Done", `${m.medicineName || "Dawai"} - ${periodInfo(p).label}`);
+          notifyLocal("✅ Done", `${m.medicineName || "Medicine"} - ${periodInfo(p).label}`);
         });
       }
     }
@@ -477,7 +434,7 @@
   async function loadHistory() {
     const listEl = document.getElementById("historyList");
     if (!patientId) {
-      listEl.innerHTML = '<div class="empty">Link hone ke baad history dikhegi</div>';
+      listEl.innerHTML = '<div class="empty">History will show after linking</div>';
       return;
     }
     try {
@@ -489,7 +446,7 @@
       );
       const results = await getDocs(q);
       if (results.empty) {
-        listEl.innerHTML = '<div class="empty">Abhi koi history nahi hai</div>';
+        listEl.innerHTML = '<div class="empty">No history yet</div>';
         return;
       }
       listEl.innerHTML = "";
@@ -505,21 +462,19 @@
         listEl.appendChild(row);
       });
     } catch (e) {
-      listEl.innerHTML = '<div class="empty">History load nahi ho payi</div>';
+      listEl.innerHTML = '<div class="empty">Could not load history</div>';
     }
   }
 
   function resetFormState() {
-    customTimes = [];
     photoDataUrl = null;
     document.getElementById("addMedForm").reset();
-    document.getElementById("photoBox").innerHTML = "Photo khichein ya chunein";
+    document.getElementById("photoBox").innerHTML = "Take or choose a photo";
     document.querySelectorAll("#typeChips .chip, #colorChips .color-chip, #periodChips .chip")
       .forEach(c => c.classList.remove("selected"));
     document.querySelector('#typeChips .chip').classList.add("selected");
     document.querySelector('#colorChips .color-chip').classList.add("selected");
     document.getElementById("periodTimeInputs").innerHTML = "";
-    renderCustomTimeList();
   }
 
   const addModal = document.getElementById("addModal");
@@ -540,13 +495,12 @@
     document.querySelectorAll("#periodTimeInputs input[data-period]").forEach(inp => {
       periodTimes[inp.dataset.period] = inp.value;
     });
-    const customPeriods = customTimes.map(t => `custom-${t}`);
-    const periods = [...periodSels, ...customPeriods];
+    const periods = periodSels;
     const gapVal = parseInt(document.getElementById("medGap").value || "0", 10);
     const medicineName = document.getElementById("medName").value.trim();
 
     if (!typeSel || !colorSel || periods.length === 0) {
-      alert("Type, rang, aur kam se kam ek time select karein");
+      alert("Please select type, color, and at least one time");
       return;
     }
 
