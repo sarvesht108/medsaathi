@@ -519,9 +519,34 @@
     document.getElementById("periodTimeInputs").innerHTML = "";
   }
 
+  document.getElementById("fillFromAfterBtn").addEventListener("click", () => {
+    const refId = document.getElementById("afterMedSelect").value;
+    const offset = parseInt(document.getElementById("afterMedMinutes").value || "0", 10);
+    if (!refId) {
+      alert("Pehle upar wali list se ek dawai chuno");
+      return;
+    }
+    const ref = existingMedicinesCache.find(m => m.id === refId);
+    if (!ref) return;
+
+    document.querySelectorAll("#periodChips .chip").forEach(c => c.classList.remove("selected"));
+    (ref.periods || []).forEach(p => {
+      const chip = document.querySelector(`#periodChips .chip[data-value="${p}"]`);
+      if (chip) chip.classList.add("selected");
+    });
+    renderPeriodTimeInputs();
+    (ref.periods || []).forEach(p => {
+      const refTime = (ref.periodTimes && ref.periodTimes[p]) ? ref.periodTimes[p] : (PERIODS[p] ? PERIODS[p].defaultTime : "08:00");
+      const newTime = addMinutesToTime(refTime, offset);
+      const inp = document.querySelector(`#periodTimeInputs input[data-period="${p}"]`);
+      if (inp) inp.value = newTime;
+    });
+  });
+
   const addModal = document.getElementById("addModal");
   document.getElementById("addMedFab").addEventListener("click", () => {
     resetFormState();
+    loadExistingMedicinesForForm();
     addModal.classList.remove("hidden");
   });
   document.getElementById("closeModal").addEventListener("click", () => {
