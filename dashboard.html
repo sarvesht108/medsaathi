@@ -206,6 +206,15 @@
         <div class="color-chip" data-value="#f1f5f9" style="background:#f1f5f9"></div>
       </div>
 
+      <label>Kisi dawai ke kitne minute baad leni hai? (optional)</label>
+      <div class="time-add-row">
+        <select id="afterMedSelect"><option value="">-- Nahi, khud select karunga --</option></select>
+      </div>
+      <div class="time-add-row">
+        <input type="number" id="afterMedMinutes" min="0" placeholder="minute (jaise 20)">
+        <button type="button" id="fillFromAfterBtn">Time Bhar Do</button>
+      </div>
+
       <label>When to take? (select)</label>
       <div class="chip-grid" id="periodChips">
         <div class="chip small" data-value="morning"><span class="picon">🌅</span>Subah</div>
@@ -252,6 +261,33 @@
   let userData = null;
   let patientId = null;
   let photoDataUrl = null;
+  let existingMedicinesCache = [];
+
+  function addMinutesToTime(timeStr, minutesToAdd) {
+    const [h, m] = timeStr.split(":").map(Number);
+    let total = (h * 60 + m + minutesToAdd) % 1440;
+    if (total < 0) total += 1440;
+    const nh = Math.floor(total / 60);
+    const nm = total % 60;
+    return String(nh).padStart(2, "0") + ":" + String(nm).padStart(2, "0");
+  }
+
+  async function loadExistingMedicinesForForm() {
+    const sel = document.getElementById("afterMedSelect");
+    sel.innerHTML = '<option value="">-- Nahi, khud select karunga --</option>';
+    existingMedicinesCache = [];
+    if (!patientId) return;
+    const q = query(collection(db, "medicines"), where("patientId", "==", patientId));
+    const results = await getDocs(q);
+    results.forEach(docSnap => {
+      const m = docSnap.data();
+      existingMedicinesCache.push({ id: docSnap.id, ...m });
+      const opt = document.createElement("option");
+      opt.value = docSnap.id;
+      opt.textContent = `${m.icon || "💊"} ${m.medicineName || "Medicine"}`;
+      sel.appendChild(opt);
+    });
+  }
 
   onAuthStateChanged(auth, async (user) => {
     if (!user) { window.location.href = "index.html"; return; }
@@ -539,4 +575,3 @@
 </script>
 </body>
 </html>
-  
